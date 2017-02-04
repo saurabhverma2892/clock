@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" type="text/css" href="/bower_components/bootstrap/dist/css/bootstrap.css">
+    <title>Clock</title>
+    <link rel="stylesheet" type="text/css" href="/css/clock.css">
+</head>
+<body>
+<div class="container">
+    <div class="controls">
+        <div class="form-group">
+            <select class="form-control timezoneSelect" id="select-time-zone">
+                <% timeZones.forEach(function(timezone){ %>
+                        <% if(!timezone.name){timezone.name=timezone.time_zone}%>
+                        <option value="<%=timezone.time_zone%>"><%=timezone.name%></option>
+                <%  }) %>
+            </select>
+            <button class="btn btn-primary" data-toggle="modal" data-target="#addTimeZone" >+ Add Timezone</button>
+            <div class="clearfix"></div>
+        </div>
+    </div>
+
+    <div class="text-center">
+        <div class="loader"><img src="/images/loader.gif"></div>
+        <div id="clock_id" style="display: none;"></div>
+    </div>
+    
+</div>
+
+
+
+<div class="modal fade" tabindex="-1" role="dialog" id="addTimeZone">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+        <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            <h4 class="modal-title">Add Timezone</h4>
+        </div>
+        <form id="addNewTimeZone">
+            <div class="modal-body">
+                    <p class="error"></p>
+                    <div class="form-group">
+                        <label for="recipient-name" class="control-label">Timezone*</label>
+                        <input type="text" class="form-control" name="timezone" onkeypress="return formatTimezoneInput(event)" placeholder="ex. +5.30" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="recipient-name" class="control-label">Name</label>
+                        <input type="text" class="form-control" name="name" placeholder="ex. Indian Timezone (optional)">
+                    </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                <button type="submit" class="btn btn-primary">Add</button>
+            </div>
+        </form>
+    </div>
+  </div>
+</div>
+    
+
+<script type="text/javascript" src="/bower_components/jquery/dist/jquery.js"></script>
+<script type="text/javascript" src="/bower_components/bootstrap/dist/js/bootstrap.js"></script>
+<script src="/bower_components/socket.io-client/dist/socket.io.js"></script>
+
+<script type="text/javascript" src="/bower_components/raphael/raphael.min.js"></script> 
+<script type="text/javascript">
+//Draw the clock
+            function draw_clock(){
+                var w = 200;
+                var h = 200;
+                canvas = Raphael("clock_id");
+                canvas.setViewBox(0,0,w,h,true)
+                canvas.setSize('100%', '100%');
+
+                var clock = canvas.circle(100,100,95);
+                 clock.attr({"fill":"#f5f5f5","stroke":"#444444","stroke-width":"5"})  
+                 var hour_sign;
+                for(i=0;i<12;i++){
+                    var start_x = 100+Math.round(80*Math.cos(30*i*Math.PI/180));
+                    var start_y = 100+Math.round(80*Math.sin(30*i*Math.PI/180));
+                    var end_x = 100+Math.round(90*Math.cos(30*i*Math.PI/180));
+                    var end_y = 100+Math.round(90*Math.sin(30*i*Math.PI/180));  
+                    hour_sign = canvas.path("M"+start_x+" "+start_y+"L"+end_x+" "+end_y);
+                }    
+                hour_hand = canvas.path("M100 100L100 50");
+                hour_hand.attr({stroke: "#444444", "stroke-width": 6});
+                minute_hand = canvas.path("M100 100L100 40");
+                minute_hand.attr({stroke: "#444444", "stroke-width": 4});
+                second_hand = canvas.path("M100 110L100 25");
+                second_hand.attr({stroke: "#444444", "stroke-width": 2}); 
+                var pin = canvas.circle(100, 100, 5);
+                pin.attr("fill", "#000000");    
+            }
+            
+            function update_clock(time){
+                var now = time;
+                var hours = now.getHours();
+                var minutes = now.getMinutes();
+                var seconds = now.getSeconds();
+
+                hour_hand.transform('r' + (30*hours+(minutes/2.5)) + ', 100, 100?');
+                minute_hand.transform('r' + 6*minutes + ', 100, 100');
+                second_hand.transform('r' + 6*seconds + ', 100, 100');
+            }
+            draw_clock();
+</script>
+
+<script type="text/javascript">
+//socket io interactions
+    var socket = io();
+    var timezone = <%=timeZones[0].time_zone%>;
+
+    var interval = setInterval(function(){
+            socket.emit('time_zone', timezone);
+    }, 1000);
+
+    function selectTimeZone(newTimeZone){
+        timezone = newTimeZone;
+        clearInterval(interval);
+        socket.emit('time_zone', timezone);
+        interval = setInterval(function(){
+            socket.emit('time_zone', timezone);
+        }, 1000);
+    }
+
+    $("#select-time-zone").change(function(){
+        var self = $(this);
+        selectTimeZone(self.val()) ;    
+    })
+
+    setTimeout(function(){
+        $(".loader").hide();
+        $("#clock_id").fadeIn();
+    }, 1000);
+    
+    socket.on('recieved_time', function(time){
+        update_clock(new Date(time));
+    })
+</script>
+
+
+<script type="text/javascript">
+//check input format for new timezone
+   function formatTimezoneInput(evt)
+   {
+      $(".error").html("");
+      var charCode = (evt.which) ? evt.which : evt.keyCode;
+      if (charCode != 46 && charCode !=45 && charCode !=43 && charCode > 31 && (charCode < 48 || charCode > 57))
+         return false;
+      return true;
+   }
+</script>
+
+<script type="text/javascript">
+//api to add new time zone.
+    $("#addNewTimeZone").submit(function(e){
+        var self = $(this);
+        e.preventDefault();
+        $.ajax({
+            url: "/api/add-time-zone",
+            data: self.serialize(),
+            method: "POST",
+            success:function(data){
+                var option = document.createElement("option");
+                option.text = data.name;
+                option.value = data.time_zone;
+                var select = document.getElementById("select-time-zone");
+                select.appendChild(option);
+                select.selectedIndex = -1;
+                $('#select-time-zone option[value="'+data.time_zone+'"]').prop('selected', true);
+                $(".error").html("");
+                document.getElementById("addNewTimeZone").reset();
+                selectTimeZone(data.time_zone);
+                $("#addTimeZone").modal('hide');
+            },
+            error:function(err){
+                $(".error").html(err.responseJSON);
+            }
+        })
+        return false;
+    })
+</script>
+
+</body>
+</html>

@@ -1,0 +1,23 @@
+{
+  "name": "clock",
+  "description": "",
+  "main": "index.js",
+  "authors": [
+    "Saurabh <saurabh.verma2892@gmail.com>"
+  ],
+  "license": "ISC",
+  "homepage": "",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "public/bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "bootstrap": "^3.3.7",
+    "socket.io-client": "^1.7.2",
+    "raphael": "^2.2.7"
+  }
+}

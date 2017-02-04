@@ -1,0 +1,37 @@
+.form-group button{
+    float:right;
+}
+
+.timezoneSelect{
+    max-width: 100px;
+    display:inline-block;
+    margin-bottom: 15px;
+}
+
+.controls{
+    margin-top: 15px;
+    margin-bottom: 15px;
+}
+
+.clearfix{
+    clear: both;
+}
+
+#clock_id{
+    max-width: 300px;
+    display: inline-block;
+}
+
+.error{
+    color:red;
+}
+
+.loader{
+    display: inline-block;
+    width:100%;
+    max-width: 340px;
+}
+
+.loader img{
+    max-width: 100%;
+}
